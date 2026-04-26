@@ -4,11 +4,34 @@ AMS is a sophisticated, web-based platform designed to automate student attendan
 
 ## 🚀 Key Features
 
-- **Automated Attendance**: Real-time facial recognition via webcam for instant attendance logging.
-- **Comprehensive Reporting**: Detailed analytics including class-wise average attendance and student-specific trends.
-- **Schedule Management**: Automated generation of yearly class schedules with flexible modification options.
-- **Dashboard Analytics**: Executive overview for admins and personalized views for trainers/teachers.
-- **Profile Management**: Secure storage and retrieval of student information and bio-data.
+### 1. Identity & Access Management
+* **Role-Based Security:** Secure login system using .NET Identity for **Admins** and **Teachers**.
+* **User Management:** Admin capability to manage system users and assign specific permissions.
+  
+  <img width="1914" height="967" alt="login" src="https://github.com/user-attachments/assets/73fabb38-c006-4fd3-a5c6-d0a858410ad0" />
+  <img width="3140" height="3326" alt="dashboard" src="https://github.com/user-attachments/assets/7dcf4880-3bff-430f-9fa1-d0973ed4eaa0" />
+  <img width="1912" height="960" alt="SystemSettings" src="https://github.com/user-attachments/assets/7a571e26-d359-40e7-80d4-f563c5705b98" />
+
+### 2. Academic Orchestration
+* **Student Profiles:** Centralized database for student bio-data and 128-float facial descriptors.
+* **Schedule Management:** Module to define yearly class schedules, time slots, and room assignments.
+* **Class Assignment:** Link students to specific courses to create accurate expected-attendee lists.
+ <img width="1915" height="952" alt="StudentProfile" src="https://github.com/user-attachments/assets/56800f6d-7854-40e9-878f-44f0be53e111" />
+
+
+### 3. Real-Time Operations & AI
+* **Automated Attendance:** Instant recognition using `face-api.js` and TensorFlow.js for contactless logging.
+* **Live Dashboard:** Real-time data visualization showing current attendance stats and system health.
+* **Instant Email Notifications:** Integrated **MailKit** service that sends a "Digital Receipt" to students/guardians immediately after recognition.
+<img width="1917" height="968" alt="Attendaces" src="https://github.com/user-attachments/assets/8fd00645-3459-467e-bcca-ef59cf0ff507" />
+
+
+### 4. Comprehensive Reporting Engine
+* **Analytical Summaries:** View class-wise and student-wise average attendance percentages.
+* **Periodic History:** Generate weekly and monthly attendance reports to track long-term trends.
+* **Excel Export:** Specialized "Course Date-wise" detailed report exportable to **.xlsx** for external auditing.
+<img width="1907" height="948" alt="AttendanceReport" src="https://github.com/user-attachments/assets/34c00c4a-9377-4c46-a419-76fdedd7e840" />
+<img width="1912" height="478" alt="AttendanceReportSummary" src="https://github.com/user-attachments/assets/ab6aa0b8-8183-451b-976f-397e6349834e" />
 
 ---
 
