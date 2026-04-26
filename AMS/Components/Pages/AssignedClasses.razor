@@ -1,0 +1,338 @@
+@page "/student-profiles/{studentId:guid}/assigned-classes"
+@using System.ComponentModel.DataAnnotations
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+
+@inject AssignedStudentService AssignedDb
+@inject ClassService ClassDb
+@inject NavigationManager Navigation
+
+<PageTitle>Assigned Classes</PageTitle>
+
+<div class="d-flex align-items-center mb-3">
+    <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <h1 class="h3 mb-0">Classes for @studentName</h1>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-12 col-md-8">
+                <label class="form-label">Search Assigned Classes</label>
+                <input class="form-control" placeholder="Search by class name..." value="@search" @oninput="OnSearchInput" />
+            </div>
+
+            <div class="col-12 col-md-4 text-md-end">
+                <button class="btn btn-primary w-100 w-md-auto" type="button" @onclick="OpenAssign">
+                    + Assign New Class
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th>Class Name</th>
+                    <th style="width: 150px;" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="2" class="text-muted py-4">Loading...</td>
+                    </tr>
+                }
+                else if (filteredItems.Count == 0)
+                {
+                    <tr>
+                        <td colspan="2" class="text-muted py-4">No classes assigned (or matching search).</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var c in filteredItems)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@c.ClassName</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => OpenDelete(c)">
+                                    Unassign
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (isAssignModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Class</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm EditContext="assignFormContext" OnSubmit="HandleAssignSubmit" FormName="assign-form">
+                        <DataAnnotationsValidator />
+
+                        @if (ShowAssignAlert)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @if (!string.IsNullOrWhiteSpace(formError))
+                                {
+                                    <div class="fw-semibold">@formError</div>
+                                }
+                                <ValidationSummary class="mb-0" />
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Select Class <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="assignModel.ClassId">
+                                <option value="0">-- Select a class --</option>
+                                @foreach (var cls in availableClasses)
+                                {
+                                    <option value="@cls.Oid">@cls.ClassName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseModals">Cancel</button>
+                            <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                @(isSaving ? "Saving..." : "Assign")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (isDeleteModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Unassign Class</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to unassign <strong>@studentName</strong> from <strong>@deleteItem?.ClassName</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleDeleteConfirm" disabled="@isSaving">
+                        @(isSaving ? "Unassigning..." : "Unassign")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter]
+    public Guid StudentId { get; set; }
+
+    private string studentName = "Unknown Student";
+
+    private List<AssignedStudentListDto> allItems = new();
+    private List<AssignedStudentListDto> filteredItems = new();
+    
+    // For the dropdown (we might load all classes for simplicity here, or you could add a search)
+    private List<ClassListDto> availableClasses = new();
+
+    private bool isLoading = true;
+    private string search = "";
+
+    // Modals
+    private bool isAssignModalOpen;
+    private bool isDeleteModalOpen;
+    private AssignedStudentListDto? deleteItem;
+
+    private bool isSaving;
+    private string formError = "";
+    
+    // Assign Form
+    private bool assignSubmitAttempted;
+    private bool assignHasValidationMessages;
+    private AssignFormModel assignModel = new();
+    private EditContext assignFormContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var student = await AssignedDb.GetStudentById(StudentId);
+        if (student != null)
+        {
+            studentName = student.FullName;
+        }
+
+        // Fetch all classes for the dropdown
+        var classesResult = await ClassDb.GetPaged("", 1, 1000); // Fetch up to 1000 classes for the dropdown
+        availableClasses = classesResult.Items.OrderBy(c => c.ClassName).ToList();
+
+        InitForms();
+        await LoadAsync();
+    }
+
+    private bool ShowAssignAlert => assignSubmitAttempted && (assignHasValidationMessages || !string.IsNullOrWhiteSpace(formError));
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/student-profiles");
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            allItems = await AssignedDb.GetByStudentId(StudentId);
+            FilterItems();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterItems()
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            filteredItems = allItems.ToList();
+        }
+        else
+        {
+            var s = search.Trim().ToLower();
+            filteredItems = allItems.Where(x => x.ClassName.ToLower().Contains(s)).ToList();
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? "";
+        FilterItems();
+    }
+
+    private void InitForms()
+    {
+        assignModel = new AssignFormModel();
+        assignFormContext = new EditContext(assignModel);
+        assignFormContext.OnValidationStateChanged += (_, __) =>
+        {
+            assignHasValidationMessages = assignFormContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+    }
+
+    private void CloseModals()
+    {
+        isAssignModalOpen = false;
+        isDeleteModalOpen = false;
+        isSaving = false;
+        formError = "";
+        assignSubmitAttempted = false;
+        assignHasValidationMessages = false;
+    }
+
+    private void OpenAssign()
+    {
+        CloseModals();
+        InitForms();
+        isAssignModalOpen = true;
+    }
+
+    private async Task HandleAssignSubmit()
+    {
+        assignSubmitAttempted = true;
+        formError = "";
+
+        var isValid = assignFormContext.Validate();
+        assignHasValidationMessages = assignFormContext.GetValidationMessages().Any();
+
+        if (!isValid) return;
+
+        if (assignModel.ClassId <= 0)
+        {
+            formError = "Please select a valid class.";
+            return;
+        }
+
+        var dto = new AssignedStudentCreateDto
+        {
+            StudentId = StudentId,
+            ClassId = assignModel.ClassId
+        };
+
+        isSaving = true;
+        try
+        {
+            await AssignedDb.Add(dto);
+            CloseModals();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = "Could not assign class. " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void OpenDelete(AssignedStudentListDto s)
+    {
+        CloseModals();
+        deleteItem = s;
+        isDeleteModalOpen = true;
+    }
+
+    private async Task HandleDeleteConfirm()
+    {
+        if (deleteItem == null) return;
+        
+        isSaving = true;
+        try
+        {
+            await AssignedDb.Delete(deleteItem.Oid);
+            CloseModals();
+            await LoadAsync();
+        }
+        catch (Exception)
+        {
+             CloseModals();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private sealed class AssignFormModel
+    {
+        [Required(ErrorMessage = "Please select a class")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid class")]
+        public int ClassId { get; set; } = 0;
+    }
+}

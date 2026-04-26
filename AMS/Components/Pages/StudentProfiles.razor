@@ -1,0 +1,462 @@
+@page "/student-profiles"
+@using System.ComponentModel.DataAnnotations
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+
+@inject StudentProfileService StudentDb
+@inject NavigationManager Navigation
+
+<PageTitle>Student Profiles</PageTitle>
+
+<h1 class="h3 mb-3">Student Profiles</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-6">
+                <label class="form-label">Search by Name, Student ID, Email, or Phone</label>
+                <input class="form-control" placeholder="Search..." value="@search" @oninput="OnSearchInput" />
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label">Page size</label>
+                <select class="form-select" value="@pageSize" @onchange="OnPageSizeChange">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-4 text-md-end">
+                <button class="btn btn-primary w-100 w-md-auto" type="button" @onclick="OpenCreate">
+                    + New Profile
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 80px;">Photo</th>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th style="width: 250px;" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">Loading...</td>
+                    </tr>
+                }
+                else if (items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">No student profiles found.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var p in items)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.ImagePath))
+                                {
+                                    <img src="@p.ImagePath" alt="Profile" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white" style="width: 48px; height: 48px;">
+                                        <i class="bi bi-person-fill fs-4"></i>
+                                    </div>
+                                }
+                            </td>
+                            <td>@p.StudentId</td>
+                            <td class="fw-semibold">@p.FullName</td>
+                            <td>@p.Email</td>
+                            <td>@p.Phone</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-info" type="button" @onclick="() => ManageClasses(p.Oid)">
+                                    Assign Class
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary ms-1" type="button" @onclick="() => OpenEdit(p)">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div class="text-muted small">
+                @if (totalCount > 0)
+                {
+                    <span>Showing @StartIndex-@EndIndex of @totalCount</span>
+                }
+            </div>
+
+            <div class="btn-group" role="group" aria-label="Pagination">
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber <= 1)" @onclick="PrevPage">Prev</button>
+                <button class="btn btn-outline-secondary" type="button" disabled="true">
+                    Page @pageNumber / @TotalPages
+                </button>
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber >= TotalPages)" @onclick="NextPage">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@ModalTitle</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm EditContext="formEditContext" OnSubmit="HandleFormSubmit" FormName="student-form">
+                        <DataAnnotationsValidator />
+
+                        @if (ShowFormAlert)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @if (!string.IsNullOrWhiteSpace(formError))
+                                {
+                                    <div class="fw-semibold">@formError</div>
+                                }
+                                <ValidationSummary class="mb-0" />
+                            </div>
+                        }
+
+                        <div class="mb-3 d-flex align-items-center gap-3">
+                            <div>
+                                @if (tempImagePreview != null)
+                                {
+                                    <img src="@tempImagePreview" alt="Preview" class="rounded-circle border" style="width: 80px; height: 80px; object-fit: cover; background: #eee;" />
+                                }
+                                else if (!string.IsNullOrEmpty(formModel.ExistingImagePath))
+                                {
+                                    <img src="@formModel.ExistingImagePath" alt="Existing" class="rounded-circle border" style="width: 80px; height: 80px; object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white" style="width: 80px; height: 80px;">
+                                        <i class="bi bi-person-fill fs-2"></i>
+                                    </div>
+                                }
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <label class="form-label">
+                                    Profile Image 
+                                    @if(isEdit) { <span>(Optional)</span> } else { <span class="text-danger">*</span> }
+                                </label>
+                                <InputFile class="form-control" OnChange="HandleFileSelected" accept="image/*" />
+                                <div class="form-text">Max size: 10MB. Recommended ratio: 1:1.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Student ID <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="formModel.StudentId" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="formModel.FullName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <InputText class="form-control" type="email" @bind-Value="formModel.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <InputText class="form-control" @bind-Value="formModel.Phone" />
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseModal">Cancel</button>
+                            <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                @(isSaving ? "Saving..." : "Save")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private readonly List<StudentProfileListDto> items = new();
+    private bool isLoading = true;
+
+    private string search = "";
+    private int pageNumber = 1;
+    private int pageSize = 10;
+    private int totalCount;
+
+    private bool isModalOpen;
+    private bool isEdit;
+    private Guid editId;
+    private bool isSaving;
+    private string formError = "";
+    private bool formSubmitAttempted;
+    private bool formHasValidationMessages;
+
+    private StudentProfileFormModel formModel = new();
+    private EditContext formEditContext = default!;
+    
+    // For local preview
+    private string? tempImagePreview;
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitForm();
+        await LoadAsync();
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(totalCount / (double)Math.Max(1, pageSize)));
+    private int StartIndex => totalCount == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    private int EndIndex => Math.Min(totalCount, pageNumber * pageSize);
+
+    private string ModalTitle => isEdit ? "Update Student Profile" : "Create Student Profile";
+
+    private bool ShowFormAlert => formSubmitAttempted && (formHasValidationMessages || !string.IsNullOrWhiteSpace(formError));
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        items.Clear();
+        try
+        {
+            var result = await StudentDb.GetPaged(search, pageNumber, pageSize);
+            totalCount = result.TotalCount;
+            pageNumber = Math.Clamp(pageNumber, 1, TotalPages);
+            items.AddRange(result.Items);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PrevPage()
+    {
+        pageNumber = Math.Max(1, pageNumber - 1);
+        await LoadAsync();
+    }
+
+    private async Task NextPage()
+    {
+        pageNumber = Math.Min(TotalPages, pageNumber + 1);
+        await LoadAsync();
+    }
+
+    private async Task OnPageSizeChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size))
+        {
+            pageSize = size;
+        }
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? "";
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private void InitForm()
+    {
+        formModel = new StudentProfileFormModel();
+        formEditContext = new EditContext(formModel);
+        formEditContext.OnValidationStateChanged += (_, __) =>
+        {
+            formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+        tempImagePreview = null;
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+        
+        // 10MB limit check
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            formError = "File is too large. Max allowed size is 10MB.";
+            return;
+        }
+
+        formModel.ImageFile = file;
+
+        // Create object URL for local preview
+        try
+        {
+            var format = file.ContentType;
+            if (string.IsNullOrEmpty(format)) format = "image/jpeg";
+            
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            tempImagePreview = $"data:{format};base64,{base64}";
+        }
+        catch
+        {
+            // Ignore preview error
+        }
+    }
+
+    private void OpenCreate()
+    {
+        isEdit = false;
+        editId = Guid.Empty;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+        tempImagePreview = null;
+        InitForm();
+        isModalOpen = true;
+    }
+
+    private void OpenEdit(StudentProfileListDto p)
+    {
+        isEdit = true;
+        editId = p.Oid;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+        tempImagePreview = null;
+
+        formModel = new StudentProfileFormModel
+        {
+            FullName = p.FullName,
+            StudentId = p.StudentId,
+            Email = p.Email,
+            Phone = p.Phone,
+            ExistingImagePath = p.ImagePath
+        };
+        formEditContext = new EditContext(formModel);
+        formEditContext.OnValidationStateChanged += (_, __) =>
+        {
+            formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        isSaving = false;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+    }
+
+    private void ManageClasses(Guid studentId)
+    {
+        Navigation.NavigateTo($"/student-profiles/{studentId}/assigned-classes");
+    }
+
+    private async Task HandleFormSubmit()
+    {
+        formSubmitAttempted = true;
+        formError = "";
+        formHasValidationMessages = false;
+
+        var isValid = formEditContext.Validate();
+        formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+
+        if (!isEdit && formModel.ImageFile == null)
+        {
+            formError = "Profile image is required.";
+            return;
+        }
+
+        if (!isValid) return;
+
+        var dto = new StudentProfileUpsertDto
+        {
+            FullName = formModel.FullName,
+            StudentId = formModel.StudentId,
+            Email = formModel.Email,
+            Phone = formModel.Phone,
+            ImageFile = formModel.ImageFile,
+            ExistingImagePath = formModel.ExistingImagePath
+        };
+
+        isSaving = true;
+        try
+        {
+            if (isEdit)
+            {
+                await StudentDb.Update(editId, dto);
+            }
+            else
+            {
+                await StudentDb.Add(dto);
+            }
+
+            CloseModal();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = "Could not save. " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private sealed class StudentProfileFormModel
+    {
+        [Required]
+        [StringLength(150)]
+        public string FullName { get; set; } = "";
+
+        [Required]
+        [StringLength(50)]
+        public string StudentId { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        [StringLength(100)]
+        public string Email { get; set; } = "";
+
+        [StringLength(20)]
+        public string Phone { get; set; } = "";
+
+        public Microsoft.AspNetCore.Components.Forms.IBrowserFile? ImageFile { get; set; }
+
+        public string? ExistingImagePath { get; set; }
+    }
+}

@@ -1,0 +1,240 @@
+@page "/classes/{ClassId:int}/assignments"
+@using AMS.Domains.Dto
+@using AMS.Domains.Entities
+@using AMS.Services.DBService
+@inject AssignedStudentService AssignmentService
+@inject StudentProfileService StudentService
+@inject ClassService ClassService
+@inject NavigationManager Navigation
+
+<PageTitle>Class Assignments</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/classes">Classes</a></li>
+                    <li class="breadcrumb-item active">@className Assignments</li>
+                </ol>
+            </nav>
+            <h1 class="h3 fw-bold">Manage Assignments: @className</h1>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Search and Assign Section -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2"></i>Assign Student</h5>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Search by Student ID or Name..." @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearchKeyUp" />
+                        <button class="btn btn-primary" @onclick="SearchStudents">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+
+                    @if (isSearching)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                        </div>
+                    }
+                    else if (searchResults != null)
+                    {
+                        @if (!searchResults.Any())
+                        {
+                            <div class="alert alert-warning border-0 small">No students found matching "@searchQuery"</div>
+                        }
+                        else
+                        {
+                            <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                                @foreach (var student in searchResults)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <div>
+                                            <div class="fw-bold">@student.FullName</div>
+                                            <small class="text-muted">ID: @student.StudentId</small>
+                                        </div>
+                                        @if (assignedStudents.Any(a => a.StudentId == student.Oid))
+                                        {
+                                            <span class="badge bg-secondary rounded-pill">Already Assigned</span>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-success rounded-pill px-3" @onclick="() => AssignStudent(student.Oid)">
+                                                Assign
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned Students List Section -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Assigned Students</h5>
+                    <span class="badge bg-primary rounded-pill">@assignedStudents.Count Students</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Student ID</th>
+                                    <th>Full Name</th>
+                                    <th class="text-end pe-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!assignedStudents.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center py-5 text-muted">
+                                            <i class="bi bi-info-circle me-2"></i>No students assigned yet.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var a in assignedStudents)
+                                    {
+                                        <tr>
+                                            <td class="ps-4">@a.StudentIdString</td>
+                                            <td class="fw-semibold">@a.StudentName</td>
+                                            <td class="text-end pe-4">
+                                                <button class="btn btn-sm btn-outline-danger border-0" @onclick="() => UnassignStudent(a.Oid)">
+                                                    <i class="bi bi-person-x me-1"></i>Unassign
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+        <div class="alert alert-danger alert-dismissible fade show shadow" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+            <button type="button" class="btn-close" @onclick='() => errorMessage = ""'></button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int ClassId { get; set; }
+
+    private string className = "Loading...";
+    private string searchQuery = "";
+    private bool isSearching = false;
+    private List<StudentProfileListDto> searchResults;
+    private List<AssignedStudentListDto> assignedStudents = new();
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadClassInfo();
+        await LoadAssignedStudents();
+    }
+
+    private async Task LoadClassInfo()
+    {
+        var cls = await ClassService.GetById(ClassId);
+        if (cls != null)
+        {
+            className = cls.ClassName;
+        }
+        else
+        {
+            Navigation.NavigateTo("/classes");
+        }
+    }
+
+    private async Task LoadAssignedStudents()
+    {
+        assignedStudents = await AssignmentService.GetByClassId(ClassId);
+    }
+
+    private async Task SearchStudents()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            searchResults = null;
+            return;
+        }
+
+        isSearching = true;
+        errorMessage = "";
+        try
+        {
+            var result = await StudentService.GetPaged(searchQuery, 1, 10);
+            searchResults = result.Items;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error searching students: " + ex.Message;
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+
+    private async Task HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchStudents();
+        }
+    }
+
+    private async Task AssignStudent(Guid studentId)
+    {
+        errorMessage = "";
+        try
+        {
+            await AssignmentService.Add(new AssignedStudentCreateDto
+            {
+                StudentId = studentId,
+                ClassId = ClassId
+            });
+            await LoadAssignedStudents();
+            // Optional: reset search or keep it? Keeping it for multiple assignments.
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task UnassignStudent(Guid assignmentId)
+    {
+        errorMessage = "";
+        try
+        {
+            await AssignmentService.Delete(assignmentId);
+            await LoadAssignedStudents();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error unassigning student: " + ex.Message;
+        }
+    }
+}

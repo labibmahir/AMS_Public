@@ -1,0 +1,82 @@
+@inject AMS.Services.SessionService.AuthSessionService Auth
+
+<div class="nav-menu-container">
+    <div class="nav-brand-shell">
+        <div class="brand-section">
+            <div class="brand-mark">
+                <img src="images/ju.jpg" class="brand-logo" alt="AMS Logo" />
+            </div>
+            <div>
+                <div class="brand-name">AMS</div>
+                <div class="brand-subtitle">Attendance Management</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-scrollable">
+        <nav class="nav-links" @onclick="HandleNavigationClick">
+            <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
+                <i class="bi bi-grid-fill"></i> Dashboard
+            </NavLink>
+            
+            <NavLink class="nav-link" href="student-profiles">
+                <i class="bi bi-people-fill"></i> Student Profiles
+            </NavLink>
+            
+            <NavLink class="nav-link" href="classes">
+                <i class="bi bi-mortarboard-fill"></i> Teacher Assignments
+            </NavLink>
+            
+            @* <NavLink class="nav-link" href="holidays"> *@
+            @*     <i class="bi bi-calendar-check-fill"></i> Class Schedules *@
+            @* </NavLink> *@
+            
+            <NavLink class="nav-link" href="attendance-reports">
+                <i class="bi bi-file-earmark-text-fill"></i> Reports
+            </NavLink>
+
+            @if (isAdmin)
+            {
+                <NavLink class="nav-link" href="users">
+                    <i class="bi bi-gear-fill"></i> System Settings
+                </NavLink>
+            }
+        </nav>
+    </div>
+
+    <div class="nav-footer">
+        <div class="system-status">
+            <span class="status-label">Live System Status:</span>
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span>Online</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnNavigate { get; set; }
+
+    private bool isAdmin;
+    private AMS.Services.SessionService.AuthSessionService.UserSession userSession;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            userSession = await Auth.GetSessionAsync();
+            isAdmin = userSession?.UserType == AMS.Domains.Data.Enums.UserType.Admin;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleNavigationClick()
+    {
+        if (OnNavigate.HasDelegate)
+        {
+            await OnNavigate.InvokeAsync();
+        }
+    }
+}

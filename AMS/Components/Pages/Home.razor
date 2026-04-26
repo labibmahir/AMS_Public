@@ -1,0 +1,479 @@
+@page "/dashboard"
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+@using AMS.Services.SessionService
+@inject DashboardService DashboardService
+@inject AttendanceNotificationService NotificationService
+@inject AuthSessionService AuthSession
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Attendance Dashboard</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="dashboard-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold">Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Overview of student attendance and class performance</p>
+        </div>
+        <div class="dashboard-toolbar d-flex flex-wrap justify-content-start justify-content-md-end text-start text-md-end align-items-center gap-3">
+            @if (userSession?.UserType == AMS.Domains.Data.Enums.UserType.Admin)
+            {
+                <button class="btn btn-outline-primary shadow-sm rounded-pill" @onclick="SendNotifications" disabled="@isProcessingNotify">
+                    @if (isProcessingNotify)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Sending...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-send-fill me-2"></i>
+                        <span>Send Daily Notifications</span>
+                    }
+                </button>
+            }
+            <div class="badge bg-white text-dark border p-2 px-3 shadow-sm rounded-pill">
+                <i class="bi bi-clock-history me-2 text-primary"></i>
+                @DateTime.Now.ToString("dddd, dd MMM yyyy")
+            </div>
+        </div>
+    </div>
+
+    @if (stats == null)
+    {
+        <div class="d-flex flex-column align-items-center justify-content-center py-5">
+            <div class="spinner-grow text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Gathering latest statistics...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-primary-subtle p-3 rounded-4 me-3 text-primary">
+                                <i class="bi bi-mortarboard-fill fs-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-subtitle text-muted mb-1 fw-bold">@(userSession?.UserType == AMS.Domains.Data.Enums.UserType.Admin ? "Total Classes" : "Assigned Classes")</h6>
+                                <h2 class="card-title mb-0 fw-bold">@stats.TotalClasses</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-progress bg-primary"></div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-success-subtle p-3 rounded-4 me-3 text-success">
+                                <i class="bi bi-graph-up-arrow fs-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-subtitle text-muted mb-1 fw-bold">Avg. Attendance</h6>
+                                <h2 class="card-title mb-0 fw-bold">@stats.AverageAttendance.ToString("N1")%</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-progress bg-success"></div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-info-subtle p-3 rounded-4 me-3 text-info">
+                                <i class="bi bi-calendar-check-fill fs-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-subtitle text-muted mb-1 fw-bold">Today's Status</h6>
+                                <h2 class="card-title mb-0 fw-bold">@stats.TodaySchedules.Count Schedules</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-progress bg-info"></div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-warning-subtle p-3 rounded-4 me-3 text-warning">
+                                <i class="bi bi-people-fill fs-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-subtitle text-muted mb-1 fw-bold">Greeting</h6>
+                                <h2 class="card-title mb-0 fw-bold fs-5">Hello, @(userSession?.FullName?.Split(' ')[0] ?? "User")</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-progress bg-warning"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Navigation / Today's Schedules -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h6 class="m-0 font-weight-bold text-dark fs-5">
+                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Navigation: Today's Schedules
+                        </h6>
+                        <span class="badge bg-light text-muted border">@stats.TodaySchedules.Count Classes Today</span>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (!stats.TodaySchedules.Any())
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-calendar-x fs-1 text-muted opacity-50 mb-3"></i>
+                                <p class="text-muted">No schedules for today.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="px-4 border-0">Class Name</th>
+                                            <th class="px-4 border-0">Timing</th>
+                                            <th class="px-4 border-0">Status</th>
+                                            <th class="text-end px-4 border-0">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var schedule in stats.TodaySchedules)
+                                        {
+                                            <tr>
+                                                <td class="px-4 py-3">
+                                                    <div class="fw-bold text-dark">@schedule.ClassName</div>
+                                                </td>
+                                                <td class="px-4">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-clock me-2 text-primary"></i>
+                                                        <span>@schedule.StartTime.ToString(@"hh\:mm") - @schedule.EndTime.ToString(@"hh\:mm")</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4">
+                                                    @if (schedule.Status == "Ongoing")
+                                                    {
+                                                        <span class="badge bg-danger rounded-pill d-inline-flex align-items-center">
+                                                            <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>
+                                                            Ongoing
+                                                        </span>
+                                                    }
+                                                    else if (schedule.Status == "Upcoming")
+                                                    {
+                                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Upcoming</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">Done</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end px-4">
+                                                    <button class="btn btn-sm @(schedule.Status == "Done" ? "btn-outline-secondary" : "btn-primary") rounded-pill px-3 shadow-sm" 
+                                                            @onclick="() => NavigateToAttendance(schedule.ClassId, schedule.ScheduleId)">
+                                                        @(schedule.Status == "Done" ? "Update" : "Take Attendance") <i class="bi bi-arrow-right ms-1"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Attendance chart -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h6 class="m-0 font-weight-bold text-dark fs-5">7-Day Attendance Trend</h6>
+                        <div class="dropdown no-arrow">
+                             <span class="badge bg-light text-primary border p-2">
+                                <i class="bi bi-info-circle me-1"></i> Percentage
+                             </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Class wise summary -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3 border-0">
+                        <h6 class="m-0 font-weight-bold text-dark fs-5">Class-wise Attendance</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="px-4 border-0">Class Details</th>
+                                        <th class="text-end px-4 border-0">Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!stats.ClassWiseAttendance.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="2" class="text-center py-4 text-muted">No attendance data available yet</td>
+                                        </tr>
+                                    }
+                                    @foreach (var cls in stats.ClassWiseAttendance.OrderByDescending(x => x.AverageAttendance))
+                                    {
+                                        <tr>
+                                            <td class="px-4 py-3">
+                                                <div class="fw-bold text-dark">@cls.ClassName</div>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 5px; width: 60px;">
+                                                        <div class="progress-bar @(cls.AverageAttendance > 80 ? "bg-success" : cls.AverageAttendance > 50 ? "bg-warning" : "bg-danger")" 
+                                                               role="progressbar" style="width: @cls.AverageAttendance%" 
+                                                               aria-valuenow="@cls.AverageAttendance" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small class="text-muted">@cls.TotalSchedules scheds</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-end px-4">
+                                                <div class="fw-bold @(cls.AverageAttendance > 80 ? "text-success" : cls.AverageAttendance > 50 ? "text-warning" : "text-danger")">
+                                                    @cls.AverageAttendance.ToString("N0")%
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @if (stats.ClassWiseAttendance.Any())
+                    {
+                        <div class="card-footer bg-white border-0 text-center py-3">
+                            <small class="text-muted">Updated in real-time</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DashboardStatsDto stats;
+    private bool isProcessingNotify = false;
+    private AuthSessionService.UserSession userSession;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userSession = await AuthSession.GetSessionAsync();
+        if (userSession == null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Guid? userId = userSession != null ? Guid.Parse(userSession.UserId) : null;
+        stats = await DashboardService.GetDashboardStats(userId, userSession?.UserType);
+    }
+
+    private void NavigateToAttendance(int classId, Guid scheduleId)
+    {
+        Navigation.NavigateTo($"/classes/{classId}/schedules/{scheduleId}/attendance");
+    }
+
+    private async Task SendNotifications()
+    {
+        isProcessingNotify = true;
+        try
+        {
+            await NotificationService.ProcessDailyAttendanceNotificationsAsync();
+            await JSRuntime.InvokeVoidAsync("alert", "Attendance notifications have been sent successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to send notifications: " + ex.Message);
+        }
+        finally
+        {
+            isProcessingNotify = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (stats != null && stats.LastSevenDaysAttendance.Any())
+        {
+            var labels = stats.LastSevenDaysAttendance.Select(x => x.Date.ToString("dd MMM")).ToArray();
+            var data = stats.LastSevenDaysAttendance.Select(x => x.AttendanceRate).ToArray();
+            
+            await JSRuntime.InvokeVoidAsync("renderAttendanceChart", labels, data);
+        }
+    }
+}
+
+<script>
+    window.renderAttendanceChart = (labels, data) => {
+        const ctx = document.getElementById('attendanceChart');
+        if (!ctx) return;
+        
+        const existingChart = Chart.getChart(ctx);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.8)');
+        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.2)');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Attendance Rate',
+                    data: data,
+                    backgroundColor: gradient,
+                    borderColor: '#0d6efd',
+                    borderWidth: 2,
+                    borderRadius: {
+                        topLeft: 8,
+                        topRight: 8,
+                        bottomLeft: 0,
+                        bottomRight: 0
+                    },
+                    barThickness: 30,
+                    hoverBackgroundColor: '#0b5ed7',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            drawBorder: false,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: { family: 'Inter, sans-serif', size: 12 },
+                            callback: function(value) { return value + '%'; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter, sans-serif', size: 12 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) { return 'Attendance: ' + context.raw.toFixed(1) + '%'; }
+                        }
+                    }
+                }
+            }
+        });
+    };
+</script>
+
+<style>
+    :root {
+        --primary-gradient: linear-gradient(45deg, #0d6efd, #0dcaf0);
+    }
+
+    .bg-primary-subtle { background-color: rgba(13, 110, 253, 0.1); }
+    .bg-success-subtle { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-info-subtle { background-color: rgba(13, 202, 240, 0.1); }
+    .bg-warning-subtle { background-color: rgba(255, 193, 7, 0.1); }
+
+    .stat-card { 
+        transition: all 0.3s cubic-bezier(.25,.8,.25,1); 
+        border-radius: 12px;
+    }
+    .stat-card:hover { 
+        transform: translateY(-8px); 
+        shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+
+    .stat-progress {
+        height: 4px;
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        opacity: 0.7;
+    }
+
+    .table thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .chart-container canvas {
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
+    }
+
+    .badge {
+        font-weight: 600;
+        padding: 0.5em 0.8em;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+    }
+
+    @@media (max-width: 1199.98px) {
+        .dashboard-toolbar {
+            width: 100%;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .dashboard-toolbar > * {
+            width: 100%;
+        }
+
+        .chart-container {
+            height: 280px;
+        }
+    }
+</style>

@@ -1,0 +1,731 @@
+@page "/classes/{classId:int}/schedules"
+@using System.ComponentModel.DataAnnotations
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+
+@inject ClassService ClassDb
+@inject ClassScheduleService ScheduleDb
+@inject NavigationManager Navigation
+
+<PageTitle>Class Schedules</PageTitle>
+
+<div class="d-flex align-items-center mb-3">
+    <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <h1 class="h3 mb-0">Schedules for @className</h1>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label">Search by Date</label>
+                <div class="input-group">
+                    <input class="form-control" type="date" value="@search" @onchange="OnSearchChange" />
+                    @if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearFilter">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    }
+                </div>
+                <small class="text-muted">Empty shows all upcoming & present.</small>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label">Page size</label>
+                <select class="form-select" value="@pageSize" @onchange="OnPageSizeChange">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-5 text-md-end">
+                <button class="btn btn-primary w-100 w-md-auto me-md-2 mb-2 mb-md-0" type="button" @onclick="OpenGenerate">
+                    + Generate Schedules
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(loadError))
+        {
+            <div class="alert alert-danger mt-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> @loadError
+            </div>
+        }
+
+        <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 140px;">Date</th>
+                    <th>Day</th>
+                    <th style="width: 140px;">Start</th>
+                    <th style="width: 140px;">End</th>
+                    <th style="width: 250px;" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">Loading...</td>
+                    </tr>
+                }
+                else if (items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">No schedules found.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var s in items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@s.ClassDate.ToString("yyyy-MM-dd")</td>
+                            <td>@s.ClassDate.DayOfWeek</td>
+                            <td>@s.StartScheduleTime.ToString(@"hh\:mm")</td>
+                            <td>@s.EndScheduleTime.ToString(@"hh\:mm")</td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" type="button" @onclick="() => GoToAttendance(s)">
+                                    Attendance
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary ms-1" type="button" @onclick="() => OpenEdit(s)">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" type="button" @onclick="() => OpenDelete(s)">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div class="text-muted small">
+                @if (totalCount > 0)
+                {
+                    <span>Showing @StartIndex-@EndIndex of @totalCount</span>
+                }
+            </div>
+
+            <div class="btn-group" role="group" aria-label="Pagination">
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber <= 1)" @onclick="PrevPage">Prev</button>
+                <button class="btn btn-outline-secondary" type="button" disabled="true">
+                    Page @pageNumber / @TotalPages
+                </button>
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber >= TotalPages)" @onclick="NextPage">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isGenerateModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Generate Schedules</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm EditContext="generateFormContext" OnSubmit="HandleGenerateSubmit" FormName="generate-form">
+                        <DataAnnotationsValidator />
+
+                        @if (ShowGenerateAlert)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @if (!string.IsNullOrWhiteSpace(formError))
+                                {
+                                    <div class="fw-semibold">@formError</div>
+                                }
+                                <ValidationSummary class="mb-0" />
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label d-block">Generation Mode</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="genMode" id="modeYearly" checked="@(!generateModel.UseDateRange)" @onchange="() => { generateModel.UseDateRange = false; StateHasChanged(); }" />
+                                <label class="form-check-label" for="modeYearly">Yearly</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="genMode" id="modeRange" checked="@(generateModel.UseDateRange)" @onchange="() => { generateModel.UseDateRange = true; StateHasChanged(); }" />
+                                <label class="form-check-label" for="modeRange">Date Range</label>
+                            </div>
+                        </div>
+
+                        @if (!generateModel.UseDateRange)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Year <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="generateModel.Year" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-12 col-sm-6">
+                                    <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                                    <InputDate @bind-Value="generateModel.StartDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <label class="form-label">End Date <span class="text-danger">*</span></label>
+                                    <InputDate @bind-Value="generateModel.EndDate" class="form-control" />
+                                </div>
+                            </div>
+                        }
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Start time <span class="text-danger">*</span></label>
+                                <input class="form-control" type="time" value="@generateModel.StartTime" @oninput="OnGenerateStartTimeInput" />
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">End time <span class="text-danger">*</span></label>
+                                <input class="form-control" type="time" value="@generateModel.EndTime" @oninput="OnGenerateEndTimeInput" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Select Class Days <span class="text-danger">*</span></label>
+                            <div>
+                                @foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+                                {
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="gen_chk_@day" 
+                                               checked="@generateModel.SelectedDays.Contains(day)" 
+                                               @onchange="(e) => ToggleGenerateDay(day, e.Value)" />
+                                        <label class="form-check-label" for="gen_chk_@day">@day</label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseModals">Cancel</button>
+                            <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                @(isSaving ? "Generating..." : "Generate")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (isEditModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Schedule</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm EditContext="editFormContext" OnSubmit="HandleEditSubmit" FormName="edit-form">
+                        <DataAnnotationsValidator />
+
+                        @if (ShowEditAlert)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @if (!string.IsNullOrWhiteSpace(formError))
+                                {
+                                    <div class="fw-semibold">@formError</div>
+                                }
+                                <ValidationSummary class="mb-0" />
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="editModel.ClassDate" />
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Start time <span class="text-danger">*</span></label>
+                                <input class="form-control" type="time" value="@editModel.StartTime" @oninput="OnEditStartTimeInput" />
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">End time <span class="text-danger">*</span></label>
+                                <input class="form-control" type="time" value="@editModel.EndTime" @oninput="OnEditEndTimeInput" />
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseModals">Cancel</button>
+                            <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                @(isSaving ? "Saving..." : "Save")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (isDeleteModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Schedule</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the schedule on <strong>@deleteItem?.ClassDate.ToString("yyyy-MM-dd")</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleDeleteConfirm" disabled="@isSaving">
+                        @(isSaving ? "Deleting..." : "Delete")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter]
+    public int ClassId { get; set; }
+
+    private string className = "Unknown Class";
+
+    private readonly List<ClassScheduleListDto> items = new();
+    private bool isLoading = true;
+
+    private string search = "";
+    private int pageNumber = 1;
+    private int pageSize = 10;
+    private int totalCount;
+
+    // Modals
+    private bool isGenerateModalOpen;
+    private bool isEditModalOpen;
+    private bool isDeleteModalOpen;
+    private Guid editId;
+    private ClassScheduleListDto? deleteItem;
+
+    private bool isSaving;
+    private string formError = "";
+    private string loadError = "";
+    
+    // Generate Form
+    private bool generateSubmitAttempted;
+    private bool generateHasValidationMessages;
+    private GenerateFormModel generateModel = new();
+    private EditContext generateFormContext = default!;
+
+    // Edit Form
+    private bool editSubmitAttempted;
+    private bool editHasValidationMessages;
+    private EditFormModel editModel = new();
+    private EditContext editFormContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var cls = await ClassDb.GetById(ClassId);
+        if (cls != null)
+        {
+            className = cls.ClassName;
+        }
+
+        // Default: Show upcoming (search empty)
+        search = "";
+
+        InitForms();
+        await LoadAsync();
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(totalCount / (double)Math.Max(1, pageSize)));
+    private int StartIndex => totalCount == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    private int EndIndex => Math.Min(totalCount, pageNumber * pageSize);
+
+    private bool ShowGenerateAlert => generateSubmitAttempted && (generateHasValidationMessages || !string.IsNullOrWhiteSpace(formError));
+    private bool ShowEditAlert => editSubmitAttempted && (editHasValidationMessages || !string.IsNullOrWhiteSpace(formError));
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/classes");
+    }
+
+    private void GoToAttendance(ClassScheduleListDto s)
+    {
+        Navigation.NavigateTo($"/classes/{ClassId}/schedules/{s.Oid}/attendance");
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        loadError = "";
+        items.Clear();
+        try
+        {
+            var result = await ScheduleDb.GetPaged(ClassId, search, pageNumber, pageSize);
+            totalCount = result.TotalCount;
+            pageNumber = Math.Clamp(pageNumber, 1, TotalPages);
+            items.AddRange(result.Items);
+        }
+        catch (Exception ex)
+        {
+            loadError = "An error occurred while loading schedules: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PrevPage()
+    {
+        pageNumber = Math.Max(1, pageNumber - 1);
+        await LoadAsync();
+    }
+
+    private async Task NextPage()
+    {
+        pageNumber = Math.Min(TotalPages, pageNumber + 1);
+        await LoadAsync();
+    }
+
+    private async Task OnPageSizeChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size))
+        {
+            pageSize = size;
+        }
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchChange(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? "";
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearFilter()
+    {
+        search = "";
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private void InitForms()
+    {
+        generateModel = new GenerateFormModel();
+        generateFormContext = new EditContext(generateModel);
+        generateFormContext.OnValidationStateChanged += (_, __) =>
+        {
+            generateHasValidationMessages = generateFormContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+
+        editModel = new EditFormModel();
+        editFormContext = new EditContext(editModel);
+        editFormContext.OnValidationStateChanged += (_, __) =>
+        {
+            editHasValidationMessages = editFormContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+    }
+
+    private void CloseModals()
+    {
+        isGenerateModalOpen = false;
+        isEditModalOpen = false;
+        isDeleteModalOpen = false;
+        isSaving = false;
+        formError = "";
+        generateSubmitAttempted = false;
+        generateHasValidationMessages = false;
+        editSubmitAttempted = false;
+        editHasValidationMessages = false;
+    }
+
+    // --- GENERATE LOGIC ---
+
+    private void OpenGenerate()
+    {
+        CloseModals();
+        InitForms();
+        isGenerateModalOpen = true;
+    }
+
+    private void OnGenerateStartTimeInput(ChangeEventArgs e)
+    {
+        generateModel.StartTime = e.Value?.ToString() ?? "";
+        generateFormContext.NotifyFieldChanged(new FieldIdentifier(generateModel, nameof(generateModel.StartTime)));
+    }
+
+    private void OnGenerateEndTimeInput(ChangeEventArgs e)
+    {
+        generateModel.EndTime = e.Value?.ToString() ?? "";
+        generateFormContext.NotifyFieldChanged(new FieldIdentifier(generateModel, nameof(generateModel.EndTime)));
+    }
+
+    private void ToggleGenerateDay(DayOfWeek day, object? checkedValue)
+    {
+        var isChecked = checkedValue is bool b ? b : false;
+        if (isChecked && !generateModel.SelectedDays.Contains(day))
+        {
+            generateModel.SelectedDays.Add(day);
+        }
+        else if (!isChecked && generateModel.SelectedDays.Contains(day))
+        {
+            generateModel.SelectedDays.Remove(day);
+        }
+    }
+
+    private async Task HandleGenerateSubmit()
+    {
+        generateSubmitAttempted = true;
+        formError = "";
+
+        var isValid = generateFormContext.Validate();
+        generateHasValidationMessages = generateFormContext.GetValidationMessages().Any();
+
+        if (!isValid) return;
+
+        if (!generateModel.SelectedDays.Any())
+        {
+            formError = "Please select at least one day of the week.";
+            return;
+        }
+
+        if (!TryParseTime(generateModel.StartTime, out var start))
+        {
+            formError = "Start time is invalid.";
+            return;
+        }
+
+        if (!TryParseTime(generateModel.EndTime, out var end))
+        {
+            formError = "End time is invalid.";
+            return;
+        }
+
+        if (generateModel.UseDateRange)
+        {
+            if (generateModel.StartDate == null || generateModel.EndDate == null)
+            {
+                formError = "Start and End dates are required.";
+                return;
+            }
+            if (generateModel.StartDate.Value.Date < DateTime.Today)
+            {
+                formError = "Start date cannot be in the past.";
+                return;
+            }
+            if (generateModel.EndDate.Value.Date < generateModel.StartDate.Value.Date)
+            {
+                formError = "End date cannot be before start date.";
+                return;
+            }
+        }
+
+        var dto = new ClassScheduleGenerateDto
+        {
+            ClassId = ClassId,
+            UseDateRange = generateModel.UseDateRange,
+            Year = generateModel.Year,
+            StartDate = generateModel.StartDate,
+            EndDate = generateModel.EndDate,
+            StartScheduleTime = start,
+            EndScheduleTime = end,
+            SelectedDays = generateModel.SelectedDays
+        };
+
+        isSaving = true;
+        try
+        {
+            await ScheduleDb.GenerateSchedules(dto);
+            CloseModals();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = "Could not generate. " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // --- EDIT LOGIC ---
+
+    private void OpenEdit(ClassScheduleListDto s)
+    {
+        CloseModals();
+        editId = s.Oid;
+        
+        editModel = new EditFormModel
+        {
+            ClassDate = s.ClassDate,
+            StartTime = s.StartScheduleTime.ToString(@"hh\:mm"),
+            EndTime = s.EndScheduleTime.ToString(@"hh\:mm")
+        };
+        editFormContext = new EditContext(editModel);
+        editFormContext.OnValidationStateChanged += (_, __) =>
+        {
+            editHasValidationMessages = editFormContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+
+        isEditModalOpen = true;
+    }
+
+    private void OnEditStartTimeInput(ChangeEventArgs e)
+    {
+        editModel.StartTime = e.Value?.ToString() ?? "";
+        editFormContext.NotifyFieldChanged(new FieldIdentifier(editModel, nameof(editModel.StartTime)));
+    }
+
+    private void OnEditEndTimeInput(ChangeEventArgs e)
+    {
+        editModel.EndTime = e.Value?.ToString() ?? "";
+        editFormContext.NotifyFieldChanged(new FieldIdentifier(editModel, nameof(editModel.EndTime)));
+    }
+
+    private async Task HandleEditSubmit()
+    {
+        editSubmitAttempted = true;
+        formError = "";
+
+        var isValid = editFormContext.Validate();
+        editHasValidationMessages = editFormContext.GetValidationMessages().Any();
+
+        if (!isValid) return;
+
+        if (!TryParseTime(editModel.StartTime, out var start))
+        {
+            formError = "Start time is invalid.";
+            return;
+        }
+
+        if (!TryParseTime(editModel.EndTime, out var end))
+        {
+            formError = "End time is invalid.";
+            return;
+        }
+
+        var dto = new ClassScheduleUpdateDto
+        {
+            ClassDate = editModel.ClassDate,
+            StartScheduleTime = start,
+            EndScheduleTime = end
+        };
+
+        isSaving = true;
+        try
+        {
+            await ScheduleDb.Update(editId, dto);
+            CloseModals();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = "Could not update. " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // --- DELETE LOGIC ---
+
+    private void OpenDelete(ClassScheduleListDto s)
+    {
+        CloseModals();
+        deleteItem = s;
+        isDeleteModalOpen = true;
+    }
+
+    private async Task HandleDeleteConfirm()
+    {
+        if (deleteItem == null) return;
+        
+        isSaving = true;
+        try
+        {
+            await ScheduleDb.Delete(deleteItem.Oid);
+            CloseModals();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            // Just close forcefully for now or show alert
+            CloseModals();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // --- MODELS & HELPERS ---
+
+    private sealed class GenerateFormModel
+    {
+        public bool UseDateRange { get; set; } = false;
+
+        [Required]
+        public int Year { get; set; } = DateTime.Now.Year;
+
+        public DateTime? StartDate { get; set; } = DateTime.Today;
+        public DateTime? EndDate { get; set; } = DateTime.Today.AddMonths(1);
+
+        [Required]
+        public string StartTime { get; set; } = "09:00";
+
+        [Required]
+        public string EndTime { get; set; } = "10:00";
+
+        public List<DayOfWeek> SelectedDays { get; set; } = new();
+    }
+
+    private sealed class EditFormModel
+    {
+        [Required]
+        public DateTime ClassDate { get; set; } = DateTime.Now.Date;
+
+        [Required]
+        public string StartTime { get; set; } = "09:00";
+
+        [Required]
+        public string EndTime { get; set; } = "10:00";
+    }
+
+    private static bool TryParseTime(string value, out TimeSpan time)
+    {
+        return TimeSpan.TryParse(value, out time);
+    }
+}

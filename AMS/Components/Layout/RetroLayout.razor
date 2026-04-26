@@ -1,0 +1,43 @@
+@inherits LayoutComponentBase
+
+<div class="retro retro-app">
+    <header class="retro-topbar">
+        <a class="retro-brand" href="">AMS</a>
+
+        <button class="retro-iconbtn" type="button" aria-label="Toggle navigation" @onclick="ToggleMenu">
+            <span class="retro-burger" aria-hidden="true"></span>
+        </button>
+
+        <nav class="retro-topnav @(isMenuOpen ? "is-open" : "")" aria-label="Primary navigation">
+            <NavLink class="retro-navlink" href="" Match="NavLinkMatch.All" @onclick="CloseMenu">Home</NavLink>
+            <NavLink class="retro-navlink" href="ui-kit" @onclick="CloseMenu">UI Kit</NavLink>
+        </nav>
+    </header>
+
+    <div class="retro-shell">
+        <aside class="retro-side" aria-label="Sidebar navigation">
+            <div class="retro-sidecard">
+                <div class="retro-sidecard__title">Navigate</div>
+                <nav class="retro-sidenav">
+                    <NavLink class="retro-sidelink" href="" Match="NavLinkMatch.All">Home</NavLink>
+                    <NavLink class="retro-sidelink" href="ui-kit">UI Kit</NavLink>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="retro-main">
+            <article class="retro-container">
+                @Body
+            </article>
+        </main>
+    </div>
+</div>
+
+@code {
+    private bool isMenuOpen;
+
+    private void ToggleMenu() => isMenuOpen = !isMenuOpen;
+
+    private void CloseMenu() => isMenuOpen = false;
+}
+

@@ -1,0 +1,337 @@
+{
+  "Files": [
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/obj/Release/net9.0/scopedcss/projectbundle/AMS.bundle.scp.css",
+      "PackagePath": "staticwebassets/AMS.j5scu77cbi.bundle.scp.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/app.css",
+      "PackagePath": "staticwebassets/app.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/favicon.png",
+      "PackagePath": "staticwebassets/favicon.png"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/images/favicon.svg",
+      "PackagePath": "staticwebassets/images/favicon.svg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/images/images.jpeg",
+      "PackagePath": "staticwebassets/images/images.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/images/ju.jpg",
+      "PackagePath": "staticwebassets/images/ju.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/images/ju.png",
+      "PackagePath": "staticwebassets/images/ju.png"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/js/attendance_recognition.js",
+      "PackagePath": "staticwebassets/js/attendance_recognition.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/js/download.js",
+      "PackagePath": "staticwebassets/js/download.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.rtl.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.rtl.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.rtl.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.rtl.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.rtl.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.rtl.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.rtl.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.rtl.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.rtl.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.rtl.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.rtl.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.rtl.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.rtl.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.rtl.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.rtl.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-reboot.rtl.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.rtl.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.rtl.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.rtl.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-utilities.rtl.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.rtl.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.rtl.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.rtl.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.rtl.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.rtl.min.css",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.rtl.min.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/css/bootstrap.rtl.min.css.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap.rtl.min.css.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.bundle.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.bundle.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.min.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.bundle.min.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.bundle.min.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.esm.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.esm.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.esm.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.esm.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.esm.min.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.esm.min.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.esm.min.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.esm.min.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.min.js"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map",
+      "PackagePath": "staticwebassets/lib/bootstrap/dist/js/bootstrap.min.js.map"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/login-ui.css",
+      "PackagePath": "staticwebassets/login-ui.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/retro.css",
+      "PackagePath": "staticwebassets/retro.css"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/00827f3d-204e-49a5-9c72-0e9eb4c6b30c.jpeg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/00827f3d-204e-49a5-9c72-0e9eb4c6b30c.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/083e3fa9-d0eb-4e08-baf9-6436874e37ac.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/083e3fa9-d0eb-4e08-baf9-6436874e37ac.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/1cecd1ab-e228-4e9d-9421-8b4ba2037a17.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/1cecd1ab-e228-4e9d-9421-8b4ba2037a17.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/2f9f05c5-10fb-4d64-b9ef-206e9f39710b.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/2f9f05c5-10fb-4d64-b9ef-206e9f39710b.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/31b86e05-4fd8-4405-9f03-9d34367b5b05.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/31b86e05-4fd8-4405-9f03-9d34367b5b05.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/384d05c1-e222-4e2d-b8af-99a26ce38e05.jpeg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/384d05c1-e222-4e2d-b8af-99a26ce38e05.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/54324f68-1c38-4905-a659-a82dc216fa14.png",
+      "PackagePath": "staticwebassets/uploads/student_profiles/54324f68-1c38-4905-a659-a82dc216fa14.png"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/63ab4170-f5d1-48ce-b9a2-48407253ff49.jpeg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/63ab4170-f5d1-48ce-b9a2-48407253ff49.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/6438f347-5c28-4f27-a842-4cc7d802d769.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/6438f347-5c28-4f27-a842-4cc7d802d769.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/67071f70-c997-409d-8ce7-1434969a5f56.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/67071f70-c997-409d-8ce7-1434969a5f56.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/74eb1ef1-01c2-4b97-8bb2-055bd15eaa5c.avif",
+      "PackagePath": "staticwebassets/uploads/student_profiles/74eb1ef1-01c2-4b97-8bb2-055bd15eaa5c.avif"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/82895ee0-65d2-4804-b9ff-3bc5af24da10.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/82895ee0-65d2-4804-b9ff-3bc5af24da10.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/8a8303df-7a0e-4f25-95de-8e3675e54d00.jpeg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/8a8303df-7a0e-4f25-95de-8e3675e54d00.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/8f2adde6-8b5d-4cb4-86d6-05c71e00ea4a.jpeg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/8f2adde6-8b5d-4cb4-86d6-05c71e00ea4a.jpeg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/a7a73430-8444-4d3d-8011-cd0cc40f910f.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/a7a73430-8444-4d3d-8011-cd0cc40f910f.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/b5ba28f6-2d69-4cc7-b541-c23c05d79b95.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/b5ba28f6-2d69-4cc7-b541-c23c05d79b95.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/cf52f33a-b8a1-4a0d-ac53-369935760529.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/cf52f33a-b8a1-4a0d-ac53-369935760529.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/de61f9eb-719c-4b95-aeab-b84ae0045762.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/de61f9eb-719c-4b95-aeab-b84ae0045762.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/e15a31d1-0c8c-4f8d-a8f5-71860c0adf5a.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/e15a31d1-0c8c-4f8d-a8f5-71860c0adf5a.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/e2de7b2f-cb56-4986-bdad-1158a5ac66a4.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/e2de7b2f-cb56-4986-bdad-1158a5ac66a4.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/e312d61f-fd88-4fd4-9632-c952c096d034.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/e312d61f-fd88-4fd4-9632-c952c096d034.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/e51d1274-af50-4190-96dd-96293b2030fb.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/e51d1274-af50-4190-96dd-96293b2030fb.jpg"
+    },
+    {
+      "Id": "/Users/etl/Desktop/AttendanceManagementSystem/AMS/AMS/wwwroot/uploads/student_profiles/ef40f507-7ef1-422b-90e3-f1203f64e229.jpg",
+      "PackagePath": "staticwebassets/uploads/student_profiles/ef40f507-7ef1-422b-90e3-f1203f64e229.jpg"
+    },
+    {
+      "Id": "obj/Release/net9.0/staticwebassets/msbuild.AMS.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj/Release/net9.0/staticwebassets/msbuild.AMS.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Release/net9.0/staticwebassets/msbuild.build.AMS.props",
+      "PackagePath": "build\\AMS.props"
+    },
+    {
+      "Id": "obj/Release/net9.0/staticwebassets/msbuild.buildMultiTargeting.AMS.props",
+      "PackagePath": "buildMultiTargeting\\AMS.props"
+    },
+    {
+      "Id": "obj/Release/net9.0/staticwebassets/msbuild.buildTransitive.AMS.props",
+      "PackagePath": "buildTransitive\\AMS.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

@@ -1,0 +1,422 @@
+@page "/classes/{classId:int}/schedules/{scheduleId:guid}/attendance"
+@using AMS.Domains.Dto
+@using AMS.Services
+@using AMS.Services.DBService
+
+@inject DailyAttendanceService AttendanceDb
+@inject ClassScheduleService ScheduleDb
+@inject ClassService ClassDb
+@inject NavigationManager Navigation
+@inject AttendanceNotificationService NotificationDb
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Daily Attendance</PageTitle>
+
+<div class="attendance-page-header d-flex align-items-center flex-column flex-lg-row gap-3 mb-3">
+    <button class="btn btn-outline-secondary attendance-header-button" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <h1 class="h3 mb-0">Daily Attendance</h1>
+</div>
+
+@if (isLoading)
+{
+    <p class="text-muted">Loading...</p>
+}
+else if (schedule == null)
+{
+    <div class="alert alert-danger">Schedule not found.</div>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">@className</h5>
+            <div class="attendance-meta text-muted">
+                <span><i class="bi bi-calendar"></i> @schedule.ClassDate.ToString("D")</span>
+                <span class="ms-3"><i class="bi bi-clock"></i> @schedule.StartScheduleTime.ToString(@"hh\:mm") - @schedule.EndScheduleTime.ToString(@"hh\:mm")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-column flex-lg-row gap-3 mb-3">
+        <h5 class="mb-0">Attendance List</h5>
+        <button class="btn btn-primary attendance-action-button" @onclick="ToggleWebcam" disabled="@isSaving">
+            <i class="bi bi-camera-fill"></i> @(isWebcamActive ? "Stop Webcam" : "Launch Webcam Attendance")
+        </button>
+    </div>
+
+    @if (isWebcamActive)
+    {
+        <div class="card shadow-sm mb-4 border-primary overflow-hidden">
+            <div class="card-header bg-primary text-white py-2">
+                <i class="bi bi-camera-video me-2"></i>Live Attendance Recognition
+            </div>
+            <div class="card-body p-0">
+                <div class="row g-0">
+                    <!-- Left Sidebar: History -->
+                    <div class="col-lg-3 border-end bg-light attendance-history-panel">
+                        <div class="p-3 border-bottom sticky-top bg-light">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-history me-2"></i>Last Recognized</h6>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            @if (!lastRecognized.Any())
+                            {
+                                <div class="p-4 text-center text-muted small">
+                                    No one recognized yet.
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var lr in lastRecognized)
+                                {
+                                    <div class="list-group-item bg-transparent d-flex align-items-center py-2 animate-recognize">
+                                        <div class="avatar-sm bg-success text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                            @lr.FullName[0]
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <div class="fw-bold small text-truncate">@lr.FullName</div>
+                                            <div class="text-muted" style="font-size: 0.7rem;">@DateTime.Now.ToString("T")</div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Video -->
+                    <div class="col-lg-9 bg-dark position-relative d-flex align-items-center justify-content-center p-3 attendance-video-panel">
+                        <div class="attendance-video-frame">
+                            <video id="attendanceVideo" width="100%" height="auto" autoplay muted playsinline class="rounded shadow-lg border border-secondary"></video>
+                            <canvas id="attendanceCanvas" width="640" height="480" style="position: absolute; top:0; left:0; width: 100%; height: 100%;"></canvas>
+                            
+                            @if (currentRecognizedName != null)
+                            {
+                                <div class="position-absolute top-50 start-50 translate-middle text-center w-100 px-3" style="z-index: 10;">
+                                    <h2 class="display-6 fw-bold text-white text-shadow slide-up-animation">
+                                        <span class="bg-success px-4 py-2 rounded-pill shadow-lg border border-2 border-white">
+                                            <i class="bi bi-check-circle-fill me-2"></i>@currentRecognizedName
+                                        </span>
+                                    </h2>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(rejectedRecognitionMessage))
+                            {
+                                <div class="position-absolute top-50 start-50 translate-middle text-center w-100 px-3" style="z-index: 10;">
+                                    <div class="d-inline-block bg-danger text-white px-4 py-2 rounded-pill shadow-lg border border-2 border-white slide-up-animation">
+                                        @rejectedRecognitionMessage
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="position-absolute bottom-0 start-0 w-100 p-3 bg-dark bg-opacity-50 text-white text-center rounded-bottom">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" hidden="@(webcamStatus == "Active")"></span>
+                                <span class="fw-bold">@webcamStatus</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-light py-2 text-center text-muted small">
+                <i class="bi bi-info-circle me-1"></i>Ensure students are well-lit and facing the camera for best results.
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th class="text-center" style="width: 150px;">Status</th>
+                            <th class="text-end" style="width: 150px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (students.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-muted py-4 text-center">No students assigned to this class.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var s in students)
+                            {
+                                <tr class="@(recentlyRecognizedStudentId == s.StudentId ? "table-success transition-all" : "")">
+                                    <td class="fw-semibold">@s.StudentIdString</td>
+                                    <td>@s.FullName</td>
+                                    <td class="text-center">
+                                        @if (s.IsPresent)
+                                        {
+                                            <span class="badge bg-success">Present</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Absent</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm @(s.IsPresent ? "btn-outline-danger" : "btn-outline-success")" 
+                                                @onclick="() => ToggleAttendance(s)" disabled="@isSaving">
+                                            @(s.IsPresent ? "Mark Absent" : "Mark Present")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .transition-all {
+        transition: background-color 0.5s ease-in-out;
+    }
+    .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .slide-up-animation {
+        animation: slideUp 0.5s ease-out;
+    }
+    @@keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-recognize {
+        animation: fadeInRight 0.3s ease-out;
+    }
+    @@keyframes fadeInRight {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    .attendance-history-panel {
+        max-height: 480px;
+        overflow-y: auto;
+    }
+    .attendance-video-panel {
+        min-height: 480px;
+    }
+    .attendance-video-frame {
+        max-width: 640px;
+        width: 100%;
+        position: relative;
+    }
+    .attendance-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+    }
+    @@media (max-width: 991.98px) {
+        .attendance-page-header,
+        .attendance-page-header h1 {
+            align-items: stretch;
+            width: 100%;
+        }
+        .attendance-header-button,
+        .attendance-action-button {
+            width: 100%;
+        }
+        .attendance-meta span + span {
+            margin-left: 0 !important;
+        }
+        .attendance-history-panel {
+            max-height: 240px;
+        }
+        .attendance-video-panel {
+            min-height: 320px;
+        }
+    }
+    @@media (max-width: 575.98px) {
+        .display-6 {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int ClassId { get; set; }
+
+    [Parameter]
+    public Guid ScheduleId { get; set; }
+
+    private string className = "Unknown Class";
+    private ClassScheduleListDto? schedule;
+    private List<AttendanceStudentListDto> students = new();
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isWebcamActive = false;
+    private string webcamStatus = "Initializing...";
+    private Guid? recentlyRecognizedStudentId;
+    private string? currentRecognizedName;
+    private string? rejectedRecognitionMessage;
+    private List<AttendanceStudentListDto> lastRecognized = new();
+    private DotNetObjectReference<ClassAttendances>? objRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var cls = await ClassDb.GetById(ClassId);
+            if (cls != null)
+            {
+                className = cls.ClassName;
+            }
+
+            schedule = await ScheduleDb.GetById(ScheduleId);
+            if (schedule != null)
+            {
+                students = await AttendanceDb.GetAttendanceForClassSchedule(ClassId, schedule.ClassDate);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/classes/{ClassId}/schedules");
+    }
+
+    private async Task ToggleAttendance(AttendanceStudentListDto student)
+    {
+        if (schedule == null || isSaving) return;
+        
+        isSaving = true;
+        try
+        {
+            var dto = new ToggleAttendanceDto
+            {
+                StudentId = student.StudentId,
+                ClassId = ClassId,
+                AttendanceDate = schedule.ClassDate,
+                IsPresent = !student.IsPresent
+            };
+
+            await AttendanceDb.ToggleAttendance(dto);
+            
+            // Re-fetch to update exactly
+            students = await AttendanceDb.GetAttendanceForClassSchedule(ClassId, schedule.ClassDate);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ToggleWebcam()
+    {
+        if (isWebcamActive)
+        {
+            await StopWebcam();
+        }
+        else
+        {
+            isWebcamActive = true;
+            StateHasChanged();
+            
+            objRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("attendanceRecognizer.start", objRef, students);
+        }
+    }
+
+    private async Task StopWebcam()
+    {
+        isWebcamActive = false;
+        await JSRuntime.InvokeVoidAsync("attendanceRecognizer.stop");
+        objRef?.Dispose();
+    }
+
+    [JSInvokable]
+    public async Task OnStudentRecognized(string studentIdStr)
+    {
+        if (Guid.TryParse(studentIdStr, out var studentId))
+        {
+            var student = students.FirstOrDefault(s => s.StudentId == studentId);
+            if (student != null && !isSaving)
+            {
+                rejectedRecognitionMessage = null;
+
+                // Update History List (last 10)
+                if (lastRecognized.FirstOrDefault()?.StudentId != studentId)
+                {
+                    lastRecognized.Insert(0, student);
+                    if (lastRecognized.Count > 10) lastRecognized.RemoveAt(10);
+                }
+
+                if (!student.IsPresent)
+                {
+                    recentlyRecognizedStudentId = studentId;
+                    currentRecognizedName = student.FullName;
+                    StateHasChanged();
+
+                    await ToggleAttendance(student);
+                    
+                    // Clear overlay after 3 seconds
+                    _ = Task.Delay(3000).ContinueWith(_ => 
+                    {
+                        recentlyRecognizedStudentId = null;
+                        currentRecognizedName = null;
+                        InvokeAsync(StateHasChanged);
+                    });
+                }
+                else
+                {
+                   // Even if already present, show the name briefly if recognized again
+                   currentRecognizedName = student.FullName;
+                   StateHasChanged();
+                   _ = Task.Delay(2000).ContinueWith(_ => 
+                   {
+                       currentRecognizedName = null;
+                       InvokeAsync(StateHasChanged);
+                   });
+                }
+            }
+        }
+    }
+
+    [JSInvokable]
+    public Task OnRecognitionRejected(string reason)
+    {
+        rejectedRecognitionMessage = reason;
+        StateHasChanged();
+
+        _ = Task.Delay(2000).ContinueWith(_ =>
+        {
+            rejectedRecognitionMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public void OnStatusChanged(string status)
+    {
+        webcamStatus = status;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}

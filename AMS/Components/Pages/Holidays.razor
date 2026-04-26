@@ -1,0 +1,431 @@
+@page "/holidays"
+@using System.ComponentModel.DataAnnotations
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+
+@inject HolidayService HolidayDb
+
+<PageTitle>Holidays</PageTitle>
+
+<h1 class="h3 mb-3">Holiday List</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-6">
+                <label class="form-label">Search by Date (yyyy-mm-dd) or Name</label>
+                <input class="form-control" placeholder="Type date or name..." value="@search" @oninput="OnSearchInput" />
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label">Page size</label>
+                <select class="form-select" value="@pageSize" @onchange="OnPageSizeChange">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-4 text-md-end">
+                <button class="btn btn-primary w-100 w-md-auto" type="button" @onclick="OpenCreate">
+                    + New Holiday
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 120px;">Date</th>
+                    <th>Holiday Name</th>
+                    <th>Year</th>
+                    <th style="width: 140px;">Type</th>
+                    <th style="width: 150px;" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">Loading...</td>
+                    </tr>
+                }
+                else if (items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-muted py-4">No holidays found.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var c in items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@(c.VacationDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                            <td>@c.HolidayName</td>
+                            <td>@c.Year</td>
+                            <td>
+                                @if (c.IsWeekend)
+                                {
+                                    <span class="badge bg-secondary">Weekend</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info text-dark">Custom</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="() => OpenEdit(c)">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div class="text-muted small">
+                @if (totalCount > 0)
+                {
+                    <span>Showing @StartIndex-@EndIndex of @totalCount</span>
+                }
+            </div>
+
+            <div class="btn-group" role="group" aria-label="Pagination">
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber <= 1)" @onclick="PrevPage">Prev</button>
+                <button class="btn btn-outline-secondary" type="button" disabled="true">
+                    Page @pageNumber / @TotalPages
+                </button>
+                <button class="btn btn-outline-secondary" type="button" disabled="@(pageNumber >= TotalPages)" @onclick="NextPage">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isModalOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@ModalTitle</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm EditContext="formEditContext" OnSubmit="HandleFormSubmit" FormName="holiday-form">
+                        <DataAnnotationsValidator />
+
+                        @if (ShowFormAlert)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @if (!string.IsNullOrWhiteSpace(formError))
+                                {
+                                    <div class="fw-semibold">@formError</div>
+                                }
+                                <ValidationSummary class="mb-0" />
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Year <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="formModel.Year" />
+                        </div>
+
+                        @if (!isEdit)
+                        {
+                            <div class="mb-3 form-check">
+                                <InputCheckbox class="form-check-input" id="isWeekendCheck" @bind-Value="formModel.IsWeekend" />
+                                <label class="form-check-label" for="isWeekendCheck">
+                                    Is Weekend Holiday?
+                                </label>
+                            </div>
+                        }
+
+                        @if (formModel.IsWeekend && !isEdit)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Select Week Days <span class="text-danger">*</span></label>
+                                <div>
+                                    @foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+                                    {
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="chk_@day" 
+                                                   checked="@formModel.SelectedDays.Contains(day)" 
+                                                   @onchange="(e) => ToggleDay(day, e.Value)" />
+                                            <label class="form-check-label" for="chk_@day">@day</label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="formModel.VacationDate" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Holiday Name <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="formModel.HolidayName" />
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseModal">Cancel</button>
+                            <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                @(isSaving ? "Saving..." : "Save")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private readonly List<HolidayListDto> items = new();
+    private bool isLoading = true;
+
+    private string search = "";
+    private int pageNumber = 1;
+    private int pageSize = 10;
+    private int totalCount;
+
+    private bool isModalOpen;
+    private bool isEdit;
+    private Guid editId;
+    private bool isSaving;
+    private string formError = "";
+    private bool formSubmitAttempted;
+    private bool formHasValidationMessages;
+
+    private HolidayFormModel formModel = new();
+    private EditContext formEditContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitForm();
+        await LoadAsync();
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(totalCount / (double)Math.Max(1, pageSize)));
+    private int StartIndex => totalCount == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    private int EndIndex => Math.Min(totalCount, pageNumber * pageSize);
+
+    private string ModalTitle => isEdit ? "Update Holiday" : "Create Holiday";
+
+    private bool ShowFormAlert => formSubmitAttempted && (formHasValidationMessages || !string.IsNullOrWhiteSpace(formError));
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        items.Clear();
+        try
+        {
+            var result = await HolidayDb.GetPaged(search, pageNumber, pageSize);
+            totalCount = result.TotalCount;
+            pageNumber = Math.Clamp(pageNumber, 1, TotalPages);
+            items.AddRange(result.Items);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PrevPage()
+    {
+        pageNumber = Math.Max(1, pageNumber - 1);
+        await LoadAsync();
+    }
+
+    private async Task NextPage()
+    {
+        pageNumber = Math.Min(TotalPages, pageNumber + 1);
+        await LoadAsync();
+    }
+
+    private async Task OnPageSizeChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size))
+        {
+            pageSize = size;
+        }
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? "";
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private void InitForm()
+    {
+        formModel = new HolidayFormModel();
+        formEditContext = new EditContext(formModel);
+        formEditContext.OnValidationStateChanged += (_, __) =>
+        {
+            formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+    }
+
+    private void ToggleDay(DayOfWeek day, object? checkedValue)
+    {
+        var isChecked = checkedValue is bool b ? b : false;
+        if (isChecked && !formModel.SelectedDays.Contains(day))
+        {
+            formModel.SelectedDays.Add(day);
+        }
+        else if (!isChecked && formModel.SelectedDays.Contains(day))
+        {
+            formModel.SelectedDays.Remove(day);
+        }
+    }
+
+    private void OpenCreate()
+    {
+        isEdit = false;
+        editId = Guid.Empty;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+        InitForm();
+        isModalOpen = true;
+    }
+
+    private void OpenEdit(HolidayListDto h)
+    {
+        isEdit = true;
+        editId = h.Oid;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+
+        formModel = new HolidayFormModel
+        {
+            Year = h.Year,
+            IsWeekend = h.IsWeekend,
+            HolidayName = h.HolidayName ?? "",
+            VacationDate = h.VacationDate
+        };
+        formEditContext = new EditContext(formModel);
+        formEditContext.OnValidationStateChanged += (_, __) =>
+        {
+            formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+            StateHasChanged();
+        };
+
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        isSaving = false;
+        formError = "";
+        formSubmitAttempted = false;
+        formHasValidationMessages = false;
+    }
+
+    private async Task HandleFormSubmit()
+    {
+        formSubmitAttempted = true;
+        formError = "";
+        formHasValidationMessages = false;
+
+        var isValid = formEditContext.Validate();
+        formHasValidationMessages = formEditContext.GetValidationMessages().Any();
+        
+        // Manual validation since Conditional attributes are tricky
+        if (formModel.IsWeekend && !isEdit)
+        {
+            if (!formModel.SelectedDays.Any())
+            {
+                formError = "Please select at least one day for the weekend.";
+                return;
+            }
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(formModel.HolidayName))
+            {
+                formError = "Holiday name is required.";
+                return;
+            }
+            if (!formModel.VacationDate.HasValue)
+            {
+                formError = "Vacation date is required.";
+                return;
+            }
+        }
+
+        if (!isValid)
+        {
+            return;
+        }
+
+        var dto = new HolidayUpsertDto
+        {
+            Year = formModel.Year,
+            IsWeekend = formModel.IsWeekend,
+            SelectedDays = formModel.SelectedDays,
+            HolidayName = formModel.HolidayName,
+            VacationDate = formModel.VacationDate
+        };
+
+        isSaving = true;
+        try
+        {
+            if (isEdit)
+            {
+                // In Edit mode, we don't bulk update, it will update a single entry
+                await HolidayDb.Update(editId, dto);
+            }
+            else
+            {
+                await HolidayDb.Add(dto);
+            }
+
+            CloseModal();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = "Could not save. " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private sealed class HolidayFormModel
+    {
+        [Required]
+        public int Year { get; set; } = DateTime.Now.Year;
+
+        public bool IsWeekend { get; set; }
+
+        public List<DayOfWeek> SelectedDays { get; set; } = new();
+
+        public string HolidayName { get; set; } = "";
+
+        public DateTime? VacationDate { get; set; } = DateTime.Now.Date;
+    }
+}

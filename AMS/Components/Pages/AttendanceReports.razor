@@ -1,0 +1,659 @@
+@page "/attendance-reports"
+@using AMS.Domains.Dto
+@using AMS.Services.DBService
+@inject ReportService ReportService
+@inject ClassService ClassService
+@inject StudentProfileService StudentService
+@inject ExportService ExportService
+@inject IJSRuntime JSRuntime
+@inject AMS.Services.SessionService.AuthSessionService AuthSession
+
+<PageTitle>Attendance Reports</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="h3 mb-1 fw-bold text-dark">Attendance Analytics & Reports</h1>
+            <p class="text-muted mb-0">Detailed insights into student and class performance.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white p-0 border-bottom">
+            <ul class="nav nav-tabs nav-fill report-tabs flex-nowrap" id="reportTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link py-3 @(activeTab == "class-wise" ? "active" : "") fw-semibold" @onclick='() => SetTab("class-wise")'>
+                        <i class="bi bi-building me-2"></i>Class Wise
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-3 @(activeTab == "student-wise" ? "active" : "") fw-semibold" @onclick='() => SetTab("student-wise")'>
+                        <i class="bi bi-people me-2"></i>Student Wise
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-3 @(activeTab == "periodic" ? "active" : "") fw-semibold" @onclick='() => SetTab("periodic")'>
+                        <i class="bi bi-calendar3 me-2"></i>Periodic Trends
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-3 @(activeTab == "schedule-wise" ? "active" : "") fw-semibold" @onclick='() => SetTab("schedule-wise")'>
+                        <i class="bi bi-clock-history me-2"></i>Schedule Wise
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link py-3 @(activeTab == "date-wise" ? "active" : "") fw-semibold" @onclick='() => SetTab("date-wise")'>
+                        <i class="bi bi-calendar-event me-2"></i>Date Wise
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-4">
+            <div class="tab-content">
+                
+                <!-- 1. Class Wise Report -->
+                @if (activeTab == "class-wise") {
+                    <div class="d-flex justify-content-end flex-wrap mb-3 gap-2">
+                        <button class="btn btn-sm btn-outline-success" @onclick="DownloadClassExcel">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="DownloadClassPdf">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Class Name</th>
+                                    <th class="text-center">Schedules</th>
+                                    <th class="text-center">Unique Students</th>
+                                    <th class="text-center">Avg. Attendance</th>
+                                    <th class="text-end pe-4">Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (classReports == null) {
+                                    <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                                } else if (!classReports.Any()) {
+                                    <tr><td colspan="5" class="text-center py-5 text-muted">No records found</td></tr>
+                                } else {
+                                    @foreach (var r in classReports) {
+                                        <tr>
+                                            <td class="ps-4 fw-bold">@r.ClassName</td>
+                                            <td class="text-center"><span class="badge bg-secondary">@r.TotalSchedules</span></td>
+                                            <td class="text-center"><span class="badge bg-info">@r.UniqueStudents</span></td>
+                                            <td class="text-center">@r.AverageAttendance.ToString("N1")%</td>
+                                            <td class="text-end pe-4">
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar @(r.AverageAttendance > 80 ? "bg-success" : "bg-warning")" 
+                                                         style="width: @r.AverageAttendance%"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <!-- 2. Student Wise Report -->
+                @if (activeTab == "student-wise") {
+                    <div class="row g-2 mb-3 align-items-center">
+                        <div class="col-md-4">
+                            <select class="form-select" @onchange="OnClassFilterChanged">
+                                <option value="">All Classes</option>
+                                @foreach (var cls in allClasses) {
+                                    <option value="@cls.Oid">@cls.ClassName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md text-start text-md-end gap-2 d-flex flex-wrap justify-content-start justify-content-md-end">
+                            <button class="btn btn-sm btn-outline-success" @onclick="DownloadStudentExcel">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="DownloadStudentPdf">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Student ID</th>
+                                    <th>Full Name</th>
+                                    <th class="text-center">Schedules</th>
+                                    <th class="text-center">Present</th>
+                                    <th class="text-end pe-4">Attendance %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (studentReports == null) {
+                                    <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                                } else if (!studentReports.Any()) {
+                                    <tr><td colspan="5" class="text-center py-5 text-muted">No records found</td></tr>
+                                } else {
+                                    @foreach (var r in studentReports) {
+                                        <tr>
+                                            <td class="ps-4">@r.StudentIdString</td>
+                                            <td class="fw-bold">@r.FullName</td>
+                                            <td class="text-center">@r.TotalSchedules</td>
+                                            <td class="text-center"><span class="text-success fw-bold">@r.TotalPresent</span></td>
+                                            <td class="text-end pe-4">
+                                                <span class="badge @(r.AverageAttendance > 75 ? "bg-success" : "bg-danger") fs-6">
+                                                    @r.AverageAttendance.ToString("N1")%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <!-- 3. Periodic Trends (Weekly/Monthly) -->
+                @if (activeTab == "periodic") {
+                    <div class="d-flex flex-wrap mb-4">
+                        <div class="btn-group report-scope-toggle" role="group">
+                            <input type="radio" class="btn-check" name="trendType" id="trendClass" autocomplete="off" checked='@(trendScope == "class")' @onclick='() => trendScope = "class"'>
+                            <label class="btn btn-outline-primary" for="trendClass">Class Trends</label>
+
+                            <input type="radio" class="btn-check" name="trendType" id="trendStudent" autocomplete="off" checked='@(trendScope == "student")' @onclick='() => trendScope = "student"'>
+                            <label class="btn btn-outline-primary" for="trendStudent">Student Trends</label>
+                        </div>
+                    </div>
+
+                    @if (trendScope == "class") {
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card border border-light-subtle rounded-4 h-100 shadow-sm">
+                                    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-week me-2"></i>Weekly Class Performance</h6>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-link text-success p-0 me-2" @onclick="DownloadWeeklyClassExcel" title="Export Excel"><i class="bi bi-file-earmark-excel"></i></button>
+                                            <button class="btn btn-sm btn-link text-danger p-0" @onclick="DownloadWeeklyClassPdf" title="Export PDF"><i class="bi bi-file-earmark-pdf"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="input-group mb-3">
+                                            <select class="form-select" @bind="selectedClassForWeekly">
+                                                @foreach (var cls in allClasses) {
+                                                    <option value="@cls.Oid">@cls.ClassName</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-primary" @onclick="LoadWeeklyClassReport">View</button>
+                                        </div>
+                                        <div class="list-group list-group-flush border-top">
+                                            @foreach (var w in weeklyClassReports) {
+                                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                                                    <div>
+                                                        <div class="fw-boldSmall">@w.PeriodLabel</div>
+                                                        <small class="text-muted">@w.TotalSchedules schedules</small>
+                                                    </div>
+                                                    <span class="badge @(w.AverageAttendance > 75 ? "bg-success" : "bg-warning") rounded-pill">@w.AverageAttendance.ToString("N1")%</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border border-light-subtle rounded-4 h-100 shadow-sm">
+                                    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-month me-2"></i>Monthly Class Performance</h6>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-link text-success p-0 me-2" @onclick="DownloadMonthlyClassExcel" title="Export Excel"><i class="bi bi-file-earmark-excel"></i></button>
+                                            <button class="btn btn-sm btn-link text-danger p-0" @onclick="DownloadMonthlyClassPdf" title="Export PDF"><i class="bi bi-file-earmark-pdf"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="input-group mb-3">
+                                            <select class="form-select" @bind="selectedClassForMonthly">
+                                                @foreach (var cls in allClasses) {
+                                                    <option value="@cls.Oid">@cls.ClassName</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-success" @onclick="LoadMonthlyClassReport">View</button>
+                                        </div>
+                                        <div class="list-group list-group-flush border-top">
+                                            @foreach (var m in monthlyClassReports) {
+                                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                                                    <div>
+                                                        <div class="fw-boldSmall">@m.PeriodLabel</div>
+                                                        <small class="text-muted">@m.TotalSchedules schedules</small>
+                                                    </div>
+                                                    <span class="badge bg-success rounded-pill">@m.AverageAttendance.ToString("N1")%</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    } else {
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card border border-light-subtle rounded-4 h-100 shadow-sm">
+                                    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-week me-2"></i>Weekly Student Progress</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="input-group mb-3">
+                                            <select class="form-select" @onchange="OnStudentWeeklyChanged">
+                                                <option value="">Select Student...</option>
+                                                @foreach (var s in allStudents) {
+                                                    <option value="@s.Oid">@s.FullName (@s.StudentId)</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="list-group list-group-flush border-top">
+                                            @foreach (var w in weeklyStudentReports) {
+                                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                                                    <div>
+                                                        <div class="fw-boldSmall">@w.PeriodLabel</div>
+                                                        <small class="text-muted">@w.TotalSchedules schedules</small>
+                                                    </div>
+                                                    <span class="badge bg-primary rounded-pill">@w.AverageAttendance.ToString("N1")%</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <div class="card border border-light-subtle rounded-4 h-100 shadow-sm">
+                                    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-month me-2"></i>Monthly Student Progress</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="input-group mb-3">
+                                            <select class="form-select" @onchange="OnStudentMonthlyChanged">
+                                                <option value="">Select Student...</option>
+                                                @foreach (var s in allStudents) {
+                                                    <option value="@s.Oid">@s.FullName (@s.StudentId)</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="list-group list-group-flush border-top">
+                                            @foreach (var m in monthlyStudentReports) {
+                                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                                                    <div>
+                                                        <div class="fw-boldSmall">@m.PeriodLabel</div>
+                                                        <small class="text-muted">@m.TotalSchedules schedules</small>
+                                                    </div>
+                                                    <span class="badge bg-success rounded-pill">@m.AverageAttendance.ToString("N1")%</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+
+                <!-- 4. Schedule Wise Detailed Report -->
+                @if (activeTab == "schedule-wise") {
+                    <div class="d-flex justify-content-end mb-3 gap-2">
+                        <button class="btn btn-sm btn-outline-success" @onclick="DownloadScheduleExcel">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="DownloadSchedulePdf">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                        </button>
+                    </div>
+                     <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Class</th>
+                                    <th>Date & Time</th>
+                                    <th class="text-center">Attendance</th>
+                                    <th class="pe-4">Present Students</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (scheduleReports == null) {
+                                    <tr><td colspan="4" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                                } else if (!scheduleReports.Any()) {
+                                    <tr><td colspan="4" class="text-center py-5 text-muted">No recent schedules found</td></tr>
+                                } else {
+                                    @foreach (var r in scheduleReports) {
+                                        <tr>
+                                            <td class="ps-4 fw-bold">@r.ClassName</td>
+                                            <td>
+                                                <div class="text-dark">@r.ScheduleDate.ToShortDateString()</div>
+                                                <small class="text-muted">@r.StartTime.ToString(@"hh\:mm")</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-primary border p-2">
+                                                    @r.PresentCount / @r.TotalCount
+                                                </span>
+                                            </td>
+                                            <td class="pe-4">
+                                                <small class="text-muted">@(string.IsNullOrEmpty(r.PresentStudentsList) ? "None" : r.PresentStudentsList)</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <!-- 5. Date Wise Attendance Report -->
+                @if (activeTab == "date-wise") {
+                    <div class="card border border-light-subtle rounded-4 h-100 shadow-sm p-5">
+                        <div class="text-center mb-5">
+                            <div class="display-1 text-primary mb-3">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                            </div>
+                            <h2 class="fw-bold">Generate Attendance Report</h2>
+                            <p class="text-muted fs-5">Select a class below to download the date-wise attendance report.</p>
+                        </div>
+                        
+                        <div class="row justify-content-center">
+                            <div class="col-md-7">
+                                <div class="card bg-light border-0 rounded-4 p-4 mb-4">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold text-dark">Select Target Class</label>
+                                        <select class="form-select form-select-lg border-2 shadow-sm" @onchange="OnDateWiseClassChanged">
+                                            <option value="0">-- Select Class to Generate --</option>
+                                            @foreach (var cls in allClasses) {
+                                                <option value="@cls.Oid" selected="@(selectedClassForDateWise == cls.Oid)">@cls.ClassName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-3">
+                                        <button class="btn btn-success btn-lg py-3 shadow-sm d-flex align-items-center justify-content-center" 
+                                                @onclick="DownloadDateWiseExcel" 
+                                                disabled="@(dateWiseResult == null || !dateWiseResult.StudentAttendance.Any())">
+                                            <i class="bi bi-file-earmark-excel fs-4 me-2"></i> 
+                                            <span class="fw-bold">Download as Microsoft Excel (.xlsx)</span>
+                                        </button>
+                                    </div>
+                                    
+                                    @if (selectedClassForDateWise != 0 && (dateWiseResult == null || !dateWiseResult.StudentAttendance.Any())) {
+                                        <div class="mt-3 text-center">
+                                            @if (dateWiseResult == null) {
+                                                <div class="spinner-border text-primary spinner-border-sm me-2"></div>
+                                                <span class="text-muted">Preparing report data...</span>
+                                            } else {
+                                                <span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i> No attendance records found for this class.</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="alert alert-info border-0 shadow-sm rounded-4">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    <strong>Note:</strong> The Date-Wise report generates a grid showing all assigned students and their attendance status (P/A) for each scheduled class date.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string activeTab = "class-wise";
+    private List<ClassAttendanceReportDto> classReports;
+    private List<StudentAttendanceReportDto> studentReports;
+    private List<ScheduleWiseAttendanceReportDto> scheduleReports;
+    
+    private List<PeriodicAttendanceDto> weeklyClassReports = new();
+    private List<PeriodicAttendanceDto> monthlyClassReports = new();
+    private List<PeriodicAttendanceDto> weeklyStudentReports = new();
+    private List<PeriodicAttendanceDto> monthlyStudentReports = new();
+    private DateWiseReportResultDto dateWiseResult;
+    
+    private List<ClassListDto> allClasses = new();
+    private List<StudentProfileListDto> allStudents = new();
+    private int? selectedClassId;
+    private int selectedClassForWeekly;
+    private int selectedClassForMonthly;
+    private int selectedClassForDateWise;
+    private string trendScope = "class";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var clsResult = await ClassService.GetPaged("", 1, 100);
+        allClasses = clsResult.Items;
+
+        var studentResult = await StudentService.GetPaged("", 1, 500);
+        allStudents = studentResult.Items;
+        
+        if (allClasses.Any()) {
+            selectedClassForWeekly = allClasses.First().Oid;
+            selectedClassForMonthly = allClasses.First().Oid;
+        }
+
+        classReports = await ReportService.GetClassWiseReport();
+        await LoadStudentReports();
+    }
+
+    private async Task SetTab(string tabName)
+    {
+        activeTab = tabName;
+        if (tabName == "schedule-wise" && scheduleReports == null) {
+            await LoadScheduleWise();
+        }
+    }
+
+    private async Task OnClassFilterChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id)) {
+            selectedClassId = id;
+        } else {
+            selectedClassId = null;
+        }
+        await LoadStudentReports();
+    }
+
+    private async Task LoadStudentReports()
+    {
+        studentReports = null;
+        studentReports = await ReportService.GetStudentAttendanceReport(selectedClassId);
+    }
+    
+    private async Task LoadWeeklyClassReport()
+    {
+        weeklyClassReports = await ReportService.GetWeeklyClassReport(selectedClassForWeekly);
+    }
+
+    private async Task LoadMonthlyClassReport()
+    {
+        monthlyClassReports = await ReportService.GetMonthlyClassReport(selectedClassForMonthly);
+    }
+
+    private async Task OnStudentWeeklyChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) {
+            weeklyStudentReports = await ReportService.GetWeeklyStudentReport(id);
+        } else {
+            weeklyStudentReports.Clear();
+        }
+    }
+
+    private async Task OnStudentMonthlyChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) {
+            monthlyStudentReports = await ReportService.GetMonthlyStudentReport(id);
+        } else {
+            monthlyStudentReports.Clear();
+        }
+    }
+
+    private async Task OnDateWiseClassChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id) && id != 0) {
+            selectedClassForDateWise = id;
+            dateWiseResult = null;
+            dateWiseResult = await ReportService.GetDateWiseAttendanceReport(id);
+        } else {
+            selectedClassForDateWise = 0;
+            dateWiseResult = null;
+        }
+    }
+
+    private async Task LoadScheduleWise()
+    {
+        scheduleReports = await ReportService.GetScheduleWiseReport();
+    }
+
+    // EXPORT LOGIC
+    private async Task DownloadClassExcel()
+    {
+        var bytes = ExportService.ExportClassReportToExcel(classReports);
+        await TriggerDownload("ClassAttendance.xlsx", bytes);
+    }
+
+    private async Task DownloadClassPdf()
+    {
+        var session = await AuthSession.GetSessionAsync();
+        var userName = session?.FullName ?? "System User";
+        var headers = new List<string[]> { new[] { "Class Name", "Schedules", "Students", "Avg %" } };
+        var rows = classReports.Select(r => new[] { r.ClassName, r.TotalSchedules.ToString(), r.UniqueStudents.ToString(), r.AverageAttendance.ToString("N1") + "%" });
+        var bytes = ExportService.ExportReportToPdf("Class Attendance Report", userName, headers, rows);
+        await TriggerDownload("ClassAttendance.pdf", bytes);
+    }
+
+    private async Task DownloadStudentExcel()
+    {
+        var bytes = ExportService.ExportStudentReportToExcel(studentReports);
+        await TriggerDownload("StudentAttendance.xlsx", bytes);
+    }
+
+    private async Task DownloadStudentPdf()
+    {
+        var session = await AuthSession.GetSessionAsync();
+        var userName = session?.FullName ?? "System User";
+        var headers = new List<string[]> { new[] { "ID", "Full Name", "Scheds", "Present", "Rate %" } };
+        var rows = studentReports.Select(r => new[] { r.StudentIdString, r.FullName, r.TotalSchedules.ToString(), r.TotalPresent.ToString(), r.AverageAttendance.ToString("N1") + "%" });
+        var bytes = ExportService.ExportReportToPdf("Student Attendance Report", userName, headers, rows);
+        await TriggerDownload("StudentAttendance.pdf", bytes);
+    }
+
+    private async Task DownloadScheduleExcel()
+    {
+        var bytes = ExportService.ExportScheduleReportToExcel(scheduleReports);
+        await TriggerDownload("ScheduleAttendance.xlsx", bytes);
+    }
+
+    private async Task DownloadSchedulePdf()
+    {
+        var session = await AuthSession.GetSessionAsync();
+        var userName = session?.FullName ?? "System User";
+        var headers = new List<string[]> { new[] { "Class", "Date", "Time", "Attended" } };
+        var rows = scheduleReports.Select(r => new[] { r.ClassName, r.ScheduleDate.ToShortDateString(), r.StartTime.ToString(@"hh\:mm"), $"{r.PresentCount}/{r.TotalCount}" });
+        var bytes = ExportService.ExportReportToPdf("Schedule Detailed Report", userName, headers, rows);
+        await TriggerDownload("ScheduleAttendance.pdf", bytes);
+    }
+
+    private async Task DownloadWeeklyClassExcel()
+    {
+        if (!weeklyClassReports.Any()) return;
+        var bytes = ExportService.ExportPeriodicReportToExcel("Weekly", weeklyClassReports);
+        await TriggerDownload("WeeklyClassAttendance.xlsx", bytes);
+    }
+
+    private async Task DownloadWeeklyClassPdf()
+    {
+        if (!weeklyClassReports.Any()) return;
+        var session = await AuthSession.GetSessionAsync();
+        var userName = session?.FullName ?? "System User";
+        var headers = new List<string[]> { new[] { "Period", "Schedules", "Avg %" } };
+        var rows = weeklyClassReports.Select(w => new[] { w.PeriodLabel, w.TotalSchedules.ToString(), w.AverageAttendance.ToString("N1") + "%" });
+        var bytes = ExportService.ExportReportToPdf("Weekly Class Attendance", userName, headers, rows);
+        await TriggerDownload("WeeklyClassAttendance.pdf", bytes);
+    }
+
+    private async Task DownloadMonthlyClassExcel()
+    {
+        if (!monthlyClassReports.Any()) return;
+        var bytes = ExportService.ExportPeriodicReportToExcel("Monthly", monthlyClassReports);
+        await TriggerDownload("MonthlyClassAttendance.xlsx", bytes);
+    }
+
+    private async Task DownloadMonthlyClassPdf()
+    {
+        if (!monthlyClassReports.Any()) return;
+        var session = await AuthSession.GetSessionAsync();
+        var userName = session?.FullName ?? "System User";
+        var headers = new List<string[]> { new[] { "Period", "Schedules", "Avg %" } };
+        var rows = monthlyClassReports.Select(m => new[] { m.PeriodLabel, m.TotalSchedules.ToString(), m.AverageAttendance.ToString("N1") + "%" });
+        var bytes = ExportService.ExportReportToPdf("Monthly Class Attendance", userName, headers, rows);
+        await TriggerDownload("MonthlyClassAttendance.pdf", bytes);
+    }
+
+    private async Task DownloadDateWiseExcel()
+    {
+        if (dateWiseResult == null) return;
+        var bytes = ExportService.ExportDateWiseReportToExcel(dateWiseResult);
+        await TriggerDownload($"DateWiseAttendance_{selectedClassForDateWise}.xlsx", bytes);
+    }
+
+
+    private async Task TriggerDownload(string fileName, byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var streamRef = new DotNetStreamReference(stream);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}
+
+<style>
+    .nav-tabs .nav-link {
+        border: none;
+        color: #64748b;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom: 3px solid #0d6efd;
+        background: transparent;
+    }
+    .nav-tabs .nav-link:hover:not(.active) {
+        background-color: #f8fafc;
+        border-bottom: 3px solid #e2e8f0;
+    }
+    .fw-boldSmall { font-weight: 600; font-size: 0.95rem; }
+    .table thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: #475569;
+        border: none;
+    }
+    .badge { padding: 0.5em 0.8em; font-weight: 600; }
+
+    .report-tabs {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .report-tabs .nav-item,
+    .report-tabs .nav-link {
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 767.98px) {
+        .report-scope-toggle {
+            width: 100%;
+        }
+
+        .report-scope-toggle .btn {
+            flex: 1 1 0;
+        }
+    }
+</style>
