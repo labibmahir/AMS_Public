@@ -9,7 +9,9 @@ AMS is a sophisticated, web-based platform designed to automate student attendan
 * **User Management:** Admin capability to manage system users and assign specific permissions.
   
   <img width="1914" height="967" alt="login" src="https://github.com/user-attachments/assets/73fabb38-c006-4fd3-a5c6-d0a858410ad0" />
+  
   <img width="3140" height="3326" alt="dashboard" src="https://github.com/user-attachments/assets/7dcf4880-3bff-430f-9fa1-d0973ed4eaa0" />
+  
   <img width="1912" height="960" alt="SystemSettings" src="https://github.com/user-attachments/assets/7a571e26-d359-40e7-80d4-f563c5705b98" />
 
 ### 2. Academic Orchestration
@@ -31,6 +33,7 @@ AMS is a sophisticated, web-based platform designed to automate student attendan
 * **Periodic History:** Generate weekly and monthly attendance reports to track long-term trends.
 * **Excel Export:** Specialized "Course Date-wise" detailed report exportable to **.xlsx** for external auditing.
 <img width="1907" height="948" alt="AttendanceReport" src="https://github.com/user-attachments/assets/34c00c4a-9377-4c46-a419-76fdedd7e840" />
+
 <img width="1912" height="478" alt="AttendanceReportSummary" src="https://github.com/user-attachments/assets/ab6aa0b8-8183-451b-976f-397e6349834e" />
 
 ---
@@ -85,7 +88,7 @@ The integration is achieved through the **IJSRuntime** abstraction.
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-repo/ams.git
+   git clone https://github.com/labibmahir/AMS_Public.git
    ```
 
 2. **Database Configuration**:
